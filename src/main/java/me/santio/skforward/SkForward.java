@@ -3,6 +3,7 @@ package me.santio.skforward;
 import com.google.inject.Inject;
 import com.moandjiezana.toml.Toml;
 import com.velocitypowered.api.event.Subscribe;
+import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
@@ -29,34 +30,45 @@ import java.nio.file.Path;
 )
 public class SkForward {
     
-    private Path dataFolder;
+    private ProxyServer server;
     private RedisClient client;
+    private Logger logger;
+    private Path folder;
     
     public static RedisPubSubAsyncCommands<String, String> pubSub;
     
     @Inject
     public SkForward(ProxyServer server, Logger logger, @DataDirectory Path folder) {
-        dataFolder = folder;
-        
+        this.server = server;
+        this.logger = logger;
+        this.folder = folder;
+    }
+    
+    @Subscribe
+    public void onProxyStart(ProxyInitializeEvent event) {
+    
         Toml config = loadConfig(folder, "config");
         if (config == null) {
             logger.error("Failed to load config!");
             return;
         }
-        
+    
         // Connect to Redis
-        client = RedisClient.create(RedisURI.Builder.redis(config.getString("redis.uri"))
+        client = RedisClient.create(RedisURI.Builder.redis(
+                config.getString("redis.uri"),
+                config.getLong("redis.port", 6379L).intValue()
+            )
             .withPassword(config.getString("redis.password").toCharArray())
             .build());
-        
+    
         if (!client.connect().sync().ping().equals("PONG")) {
             logger.error("Failed to connect to Redis!");
             return;
         }
-        
+    
         StatefulRedisPubSubConnection<String, String> connection = client.connectPubSub();
         pubSub = connection.async();
-       
+    
         logger.info("Successfully connected to redis!");
         server.getEventManager().register(this, new Listeners());
     }
