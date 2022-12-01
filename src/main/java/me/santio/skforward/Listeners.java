@@ -8,7 +8,7 @@ public class Listeners {
     
     private String toRediSkript(String message) {
         // This isn't the best way to handle this, however for our needs it'll be alright
-        return "{\"Type\":\"Skript\",\"Messages\":[\"" + message + "!\"],\"Date\":" + System.currentTimeMillis() + "}";
+        return "{\"Type\":\"Skript\",\"Messages\":[\"" + message + "\"],\"Date\":" + System.currentTimeMillis() + "}";
     }
     
     @Subscribe
